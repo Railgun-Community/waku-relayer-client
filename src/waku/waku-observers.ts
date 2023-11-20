@@ -7,6 +7,7 @@ import { RelayerTransactResponse } from '../transact/relayer-transact-response.j
 import { RelayerDebug } from '../utils/relayer-debug.js';
 import { ContentTopic } from '@waku/relay';
 import { isDefined } from '../utils/is-defined.js';
+import { WAKU_RAILGUN_PUB_SUB_TOPIC } from '../models/constants.js';
 
 export class WakuObservers {
   private static currentChain: Optional<Chain>;
@@ -52,13 +53,16 @@ export class WakuObservers {
 
     const contentTopicFees = contentTopics.fees(chain);
     await waku.relay.subscribe(
-      createDecoder(contentTopicFees),
+      createDecoder(contentTopicFees, WAKU_RAILGUN_PUB_SUB_TOPIC),
       (message: IMessage) =>
         handleRelayerFeesMessage(chain, message, contentTopicFees),
     );
 
     await waku.relay.subscribe(
-      createDecoder(contentTopics.transactResponse(chain)),
+      createDecoder(
+        contentTopics.transactResponse(chain),
+        WAKU_RAILGUN_PUB_SUB_TOPIC,
+      ),
       RelayerTransactResponse.handleRelayerTransactionResponseMessage,
     );
 
@@ -73,10 +77,15 @@ export class WakuObservers {
   static getCurrentContentTopics(waku?: RelayNode): string[] {
     // @ts-expect-error - 'observers' is private.
     const observers = waku?.relay?.observers as Map<ContentTopic, Set<unknown>>;
-
     const contentTopics: string[] = [];
     for (const observer of observers.keys()) {
-      contentTopics.push(observer);
+      const pubsubTopic = observers.get(observer);
+      if (isDefined(pubsubTopic)) {
+        const pubSubContent = pubsubTopic.keys() ?? [];
+        for (const contentTopic of pubSubContent) {
+          contentTopics.push(String(contentTopic));
+        }
+      }
     }
     return contentTopics;
   }

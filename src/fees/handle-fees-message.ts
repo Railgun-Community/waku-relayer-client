@@ -46,6 +46,9 @@ export const handleRelayerFeesMessage = async (
     if (isExpiredTimestamp(message.timestamp)) {
       return;
     }
+    if (message.payload.length === 0) {
+      return;
+    }
 
     const payload = bytesToUtf8(message.payload);
     const { data, signature } = JSON.parse(payload) as {
