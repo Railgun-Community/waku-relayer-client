@@ -23,11 +23,13 @@
     "test": "npm run compile-test && NODE_ENV=test mocha"
   },
   "dependencies": {
-    "@libp2p/bootstrap": "^6.0.0",
-    "@libp2p/tcp": "^6.0.0",
-    "@waku/core": "0.0.20",
-    "@waku/create": "0.0.15",
-    "@waku/relay": "0.0.3"
+    "@libp2p/bootstrap": "^9.0.12",
+    "@libp2p/interface-peer-id": "^2.0.2",
+    "@libp2p/tcp": "^8.0.13",
+    "@waku/core": "0.0.25",
+    "@waku/relay": "0.0.8",
+    "@waku/sdk": "0.0.21",
+    "libp2p": "^0.46.3"
   },
   "peerDependencies": {
     "@railgun-community/shared-models": "6.3.x",
