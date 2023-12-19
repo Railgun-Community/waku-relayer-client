@@ -21,6 +21,10 @@ const relayerOptions: RelayerOptions = {};
 
 const WETH_ADDRESS = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
 
+const WETH_ADDRESS_GOERLI = '0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6';
+
+const CURRENT_TEST_TOKEN = WETH_ADDRESS;
+
 let currentChain: Chain;
 let currentStatus: RelayerConnectionStatus;
 const statusCallback = (chain: Chain, status: RelayerConnectionStatus) => {
@@ -46,7 +50,7 @@ describe('waku-relayer-client', () => {
       async () => currentStatus,
       status => status === RelayerConnectionStatus.Connected,
       20,
-      20000 / 20, // 20 sec.
+      60000 / 60, // 20 sec.
     );
     if (statusInitialConnection !== RelayerConnectionStatus.Connected) {
       throw new Error('Could not establish initial connection with fees.');
@@ -54,11 +58,11 @@ describe('waku-relayer-client', () => {
 
     const useRelayAdapt = true;
     const selectedRelayer: Optional<SelectedRelayer> =
-      WakuRelayerClient.findBestRelayer(chain, WETH_ADDRESS, useRelayAdapt);
+      WakuRelayerClient.findBestRelayer(chain, CURRENT_TEST_TOKEN, useRelayAdapt);
 
     expect(selectedRelayer).to.be.an('object');
     expect(selectedRelayer?.railgunAddress).to.be.a('string');
-    expect(selectedRelayer?.tokenAddress).to.equal(WETH_ADDRESS);
+    expect(selectedRelayer?.tokenAddress).to.equal(CURRENT_TEST_TOKEN);
     expect(selectedRelayer?.tokenFee.availableWallets).to.be.greaterThanOrEqual(
       1,
     );
