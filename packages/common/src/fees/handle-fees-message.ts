@@ -17,18 +17,23 @@ import { invalidRelayerVersion } from '../utils/relayer-util.js';
 import { bytesToUtf8, hexToUTF8String } from '../utils/conversion.js';
 import { isDefined } from '../utils/is-defined.js';
 
-const isExpiredTimestamp = (timestamp: Optional<Date>) => {
-  if (!timestamp) {
+const isExpiredTimestamp = (timestamp: Optional<Date>, expirationFeeTimestamp: Optional<Date>) => {
+  if (!timestamp || !expirationFeeTimestamp) {
     return false;
   }
-  if (timestamp.getFullYear() === 1970) {
+  let messageTimestamp = timestamp;
+  if (messageTimestamp.getFullYear() === 1970) {
     // Waku timestamp bug.
-    return false;
+    messageTimestamp = new Date(messageTimestamp.getTime() * 1000);
   }
-
   // Expired if message originated > 45 seconds ago.
-  const expirationMsec = Date.now() - 45 * 1000;
-  return timestamp.getTime() < expirationMsec;
+  // check if fee expires within 45 seconds; if it doesn't ignore it.
+  const nowTime = Date.now();
+  const expirationMsec = nowTime - 45 * 1000;
+  const expirationFeeMsec = nowTime + 45 * 1000;
+  const timestampExpired = messageTimestamp.getTime() < expirationMsec
+  const feeExpired = expirationFeeTimestamp.getTime() < expirationFeeMsec;
+  return timestampExpired || feeExpired;
 };
 
 export const handleRelayerFeesMessage = async (
@@ -38,15 +43,17 @@ export const handleRelayerFeesMessage = async (
 ) => {
   try {
     if (!isDefined(message.payload)) {
+      RelayerDebug.log('Skipping Relayer fees message: NO PAYLOAD');
       return;
     }
     if (contentTopic !== contentTopics.fees(chain)) {
+      RelayerDebug.log('Skipping Relayer fees message: WRONG TOPIC');
       return;
     }
-    if (isExpiredTimestamp(message.timestamp)) {
+    if (!isDefined(message.timestamp)) {
+      RelayerDebug.log('Skipping Relayer fees message: NO TIMESTAMP');
       return;
     }
-
     const payload = bytesToUtf8(message.payload);
     const { data, signature } = JSON.parse(payload) as {
       data: string;
@@ -54,6 +61,10 @@ export const handleRelayerFeesMessage = async (
     };
     const utf8String = hexToUTF8String(data);
     const feeMessageData = JSON.parse(utf8String) as RelayerFeeMessageData;
+    const feeExpirationTime = new Date(feeMessageData.feeExpiration);
+    if (isExpiredTimestamp(message.timestamp, feeExpirationTime)) {
+      return;
+    }
 
     if (!isDefined(crypto.subtle) && RelayerConfig.IS_DEV) {
       RelayerDebug.log(
